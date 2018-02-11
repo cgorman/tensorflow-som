@@ -15,4 +15,11 @@ code but has a few key modifications:
 
  ![Example U-Matrix](https://github.com/cgorman/tensorflow-som/blob/master/example_umatrix.png)
  
+ I was going to write a blog post about this but I ended up just repeating everything I wrote in the comments,
+ so please read them if you'd like to understand the code. For reference, the batch formula for SOMs is
+ 
+ ![SOM batch formula](https://github.com/cgorman/tensorflow-som/blob/master/batch_formula.gif)
+ 
+ where theta is the neighborhood function and x is the input vector.
+ 
  <sup>1</sup>http://ieeexplore.ieee.org/document/58325/
