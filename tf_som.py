@@ -153,8 +153,8 @@ class SelfOrganizingMap:
             # This list will contain the handles to the numerator and denominator tensors for each of the towers
             tower_updates = list()
             # This is used by all of the towers and needs to be fed to the graph, so let's put it here
-            with tf.name_scope('Iteration'):
-                self._iter_input = tf.placeholder("float", [], name="iter")
+            with tf.name_scope('Epoch'):
+                self._epoch = tf.placeholder("float", [], name="iter")
             if self._gpus > 0:
                 for i in range(self._gpus):
                     # We only want the summaries of the last tower, so wipe it out each time
@@ -216,9 +216,6 @@ class SelfOrganizingMap:
 
         with tf.name_scope('Input'):
             self._input = tf.identity(self._input_tensor)
-
-        with tf.name_scope('Epoch'):
-            self._epoch = tf.placeholder("float", [], name="iter")
 
         # Start by computing the best matching units / winning units for each input vector in the batch.
         # Basically calculates the Euclidean distance between every
