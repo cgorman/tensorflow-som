@@ -24,7 +24,7 @@ code but has a few key modifications:
  
  The activity function turns the distance between each of the weights and an input vector into a value between 0 and 1, i.e. similar weights elicit a higher activity.
  The activity function is parameterized with the `output_sensitivity` variable.
- When this value is close to zero the range of distances that elicit high activity is narrow, and vice versa.
+ When this value is close to zero the range of distances that elicit high activity is wider, and vice versa.
  Here is an example of a few different values of the output sensitivity (`-c` here):
  
  ![Effect of Output Sensitivity Parameter](https://github.com/cgorman/tensorflow-som/blob/master/output_sens.png)
