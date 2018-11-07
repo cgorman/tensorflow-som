@@ -56,8 +56,9 @@ class SelfOrganizingMap:
         :param model_name: The name that will be given to the checkpoint files
         :param softmax_activity: If `True` the activity will be softmaxed to form a probability distribution
         :param gpus: The number of GPUs to train the SOM on
-        :param output_sensitivity The constant controlling the width of the activity gaussian. See the Jupyter Notebook
-                for an explanation.
+        :param output_sensitivity The constant controlling the width of the activity gaussian. Numbers closer to zero
+                elicit activity when distance is low, effectively introducing a threshold on the distance w/r/t activity.
+                See the plot in the readme file for a little introduction.
         :param session: A `tf.Session()` for executing the graph
         """
         self._m = abs(int(m))
