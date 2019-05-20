@@ -31,9 +31,9 @@ Note that the example requires scikit-leran to be installed.
  ![Effect of Output Sensitivity Parameter](https://github.com/cgorman/tensorflow-som/blob/master/output_sens.png)
  
 ## Note about the learning rate
-There was a really dumb bug in commits before (and including) e69ed79357d9d7d4ac846630940a0f57551caf41 where the learning rate (alpha) was set extremely incorrectly.
+There was a really dumb bug in commits before 2a0ee25 where the learning rate (alpha) was set extremely incorrectly.
 Instead of shrinking from n to 0, it grew from n to 1.
 If you had bad luck with this module previously, this may fix it.
-Sorry for the goof, and thank you for noticing #7!
+Sorry for the goof!
 
  <sup>1</sup>http://ieeexplore.ieee.org/document/58325/
