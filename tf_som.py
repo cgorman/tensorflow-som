@@ -133,7 +133,8 @@ class SelfOrganizingMap:
             self._saver = tf.train.Saver()
 
         if self._restore_path is not None:
-            logging.info("Restoring variables from checkpoint file {}".format(self._restore_path))
+            logging.info("Restoring variables from checkpoint file {}".format(
+                self._restore_path))
             self._saver.restore(self._sess, Path(self._restore_path))
             self._trained = True
             logging.info("Checkpoint loaded")
@@ -168,13 +169,15 @@ class SelfOrganizingMap:
 
                 with tf.device('/gpu:{}'.format(self._gpus - 1)):
                     # Put the activity op on the last GPU
-                    self._activity_op = self._make_activity_op(self._input_tensor)
+                    self._activity_op = self._make_activity_op(
+                        self._input_tensor)
             else:
                 # Running CPU only
                 with tf.name_scope("Tower_0") as scope:
                     tower_updates.append(self._tower_som())
                     tf.get_variable_scope().reuse_variables()
-                    self._activity_op = self._make_activity_op(self._input_tensor)
+                    self._activity_op = self._make_activity_op(
+                        self._input_tensor)
 
             with tf.name_scope("Weight_Update"):
                 # Get the outputs
@@ -195,7 +198,8 @@ class SelfOrganizingMap:
             # Each tower will get its own copy of the weights variable. Since the towers are constructed sequentially,
             # the handle to the Tensors will be different for each tower even if we reference "self"
             self._weights = tf.get_variable(name='weights',
-                                            shape=[self._m * self._n, self._dim],
+                                            shape=[
+                                                self._m * self._n, self._dim],
                                             initializer=tf.random_uniform_initializer(maxval=1))
 
             with tf.name_scope('summaries'):
@@ -204,11 +208,15 @@ class SelfOrganizingMap:
                 mean = tf.reduce_mean(self._weights)
                 self._summary_list.append(tf.summary.scalar('mean', mean))
                 with tf.name_scope('stdev'):
-                    stdev = tf.sqrt(tf.reduce_mean(tf.squared_difference(self._weights, mean)))
+                    stdev = tf.sqrt(tf.reduce_mean(
+                        tf.squared_difference(self._weights, mean)))
                 self._summary_list.append(tf.summary.scalar('stdev', stdev))
-                self._summary_list.append(tf.summary.scalar('max', tf.reduce_max(self._weights)))
-                self._summary_list.append(tf.summary.scalar('min', tf.reduce_min(self._weights)))
-                self._summary_list.append(tf.summary.histogram('histogram', self._weights))
+                self._summary_list.append(tf.summary.scalar(
+                    'max', tf.reduce_max(self._weights)))
+                self._summary_list.append(tf.summary.scalar(
+                    'min', tf.reduce_min(self._weights)))
+                self._summary_list.append(
+                    tf.summary.histogram('histogram', self._weights))
 
         # Matrix of size [m*n, 2] for SOM grid locations of neurons.
         # Maps an index to an (x,y) coordinate of a neuron in the map for calculating the neighborhood distance
@@ -241,7 +249,8 @@ class SelfOrganizingMap:
         # This will extract the location of the BMU in the map for each input based on the BMU's indices
         with tf.name_scope('BMU_Locations'):
             # Using tf.gather we can use `bmu_indices` to index the location vectors directly
-            bmu_locs = tf.reshape(tf.gather(self._location_vects, bmu_indices), [-1, 2])
+            bmu_locs = tf.reshape(
+                tf.gather(self._location_vects, bmu_indices), [-1, 2])
 
         with tf.name_scope('Learning_Rate'):
             # With each epoch, the initial sigma value decreases linearly
@@ -252,12 +261,9 @@ class SelfOrganizingMap:
                                                        tf.cast(tf.subtract(self._max_epochs, 1),
                                                                tf.float32))))
 
-            alpha = tf.subtract(self._initial_learning_rate,
-                                tf.multiply(self._epoch,
-                                            tf.divide(tf.cast(tf.subtract(self._initial_learning_rate, 1),
-                                                              tf.float32),
-                                                      tf.cast(tf.subtract(self._max_epochs, 1),
-                                                              tf.float32))))
+            alpha = tf.multiply(self._initial_learning_rate,
+                                tf.subtract(1.0, tf.divide(tf.cast(self._epoch, tf.float32),
+                                                           tf.cast(self._max_epochs, tf.float32))))
 
             # Construct the op that will generate a matrix with learning rates for all neurons and all inputs,
             # based on iteration number and location to BMU
@@ -323,18 +329,20 @@ class SelfOrganizingMap:
                 c = tf.constant(self._c, dtype="float32")
                 # Get the euclidean distance between each neuron and the input vectors
                 dist = tf.norm(tf.subtract(
-                        tf.expand_dims(self._weights, axis=0),
-                        tf.expand_dims(input_tensor, axis=1)),
+                    tf.expand_dims(self._weights, axis=0),
+                    tf.expand_dims(input_tensor, axis=1)),
                     name="Distance", axis=2)  # [batch_size, neurons]
 
                 # Calculate the Gaussian of the activity. Units with distances closer to 0 will have activities
                 # closer to 1.
-                activity = tf.exp(tf.multiply(tf.pow(dist, 2), c), name="Gaussian")
+                activity = tf.exp(tf.multiply(
+                    tf.pow(dist, 2), c), name="Gaussian")
 
                 # Convert the activity into a softmax probability distribution
                 if self._softmax_activity:
                     activity = tf.divide(tf.exp(activity),
-                                         tf.expand_dims(tf.reduce_sum(tf.exp(activity), axis=1), axis=-1),
+                                         tf.expand_dims(tf.reduce_sum(
+                                             tf.exp(activity), axis=1), axis=-1),
                                          name="Softmax")
 
                 return tf.identity(activity, name="Output")
@@ -366,18 +374,22 @@ class SelfOrganizingMap:
                 current_batch = batch + (batches_per_epoch * epoch)
                 global_step = current_batch + step_offset
                 percent_complete = current_batch / total_batches
-                logging.debug("\tBatch {}/{} - {:.2%} complete".format(batch, batches_per_epoch, percent_complete))
+                logging.debug("\tBatch {}/{} - {:.2%} complete".format(batch,
+                                                                       batches_per_epoch, percent_complete))
                 # Only do summaries when a SummaryWriter has been provided
                 if writer:
                     if current_batch > 0 and current_batch % summary_mod == 0:
-                        run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+                        run_options = tf.RunOptions(
+                            trace_level=tf.RunOptions.FULL_TRACE)
                         run_metadata = tf.RunMetadata()
                         summary, _, _, = self._sess.run([self._merged, self._training_op,
                                                          self._activity_op],
-                                                        feed_dict={self._epoch: epoch},
+                                                        feed_dict={
+                                                            self._epoch: epoch},
                                                         options=run_options,
                                                         run_metadata=run_metadata)
-                        writer.add_run_metadata(run_metadata, "step_{}".format(global_step))
+                        writer.add_run_metadata(
+                            run_metadata, "step_{}".format(global_step))
                         writer.add_summary(summary, global_step)
                         self._save_checkpoint(global_step)
                     else:
@@ -385,7 +397,8 @@ class SelfOrganizingMap:
                                                     feed_dict={self._epoch: epoch})
                         writer.add_summary(summary, global_step)
                 else:
-                    self._sess.run(self._training_op, feed_dict={self._epoch: epoch})
+                    self._sess.run(self._training_op, feed_dict={
+                                   self._epoch: epoch})
 
         self._trained = True
         return global_step

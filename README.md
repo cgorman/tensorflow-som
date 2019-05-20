@@ -3,8 +3,7 @@ An implementation of the Kohonen self-organizing map<sup>1</sup> for TensorFlow 
 off of [Sachin Joglekar's](https://codesachin.wordpress.com/2015/11/28/self-organizing-maps-with-googles-tensorflow/)
 code but has a few key modifications:
  * Uses TensorFlow broadcasting semantics instead of `tf.pack` and `for` loops.
- * Input data is expected from a `Tensor` rather than a `tf.placeholder`, allowing for use with faster and more complex
- input data pipelines.
+ * Input data is expected from a `Tensor` rather than a `tf.placeholder`, allowing for use with faster and more complex input data pipelines.
  * Training uses the batch algorithm rather than the online one, providing a major speed boost if you have the GPU RAM.
  Also, as a result of that, I added...
  * Multi-GPU support (for single machines with multiple GPUs, it doesn't have multi-node training).
@@ -15,6 +14,8 @@ code but has a few key modifications:
 
  ![Example U-Matrix](https://github.com/cgorman/tensorflow-som/blob/master/example_umatrix.png)
  
+Note that the example requires scikit-leran to be installed.
+
  I was going to write a blog post about this but I ended up just repeating everything I wrote in the comments,
  so please read them if you'd like to understand the code. For reference, the batch formula for SOMs is
  
@@ -29,4 +30,10 @@ code but has a few key modifications:
  
  ![Effect of Output Sensitivity Parameter](https://github.com/cgorman/tensorflow-som/blob/master/output_sens.png)
  
+#Note
+There was a really dumb bug in commits before (and including) e69ed79357d9d7d4ac846630940a0f57551caf41 where the learning rate (alpha) was set extremely incorrectly.
+Instead of shrinking from n to 0, it grew from n to 1.
+If you had bad luck with this module previously, this may fix it.
+Sorry for the goof, and thank you for noticing #7!
+
  <sup>1</sup>http://ieeexplore.ieee.org/document/58325/
