@@ -12,8 +12,8 @@ An example usage of the TensorFlow SOM. Loads a data set, trains a SOM, and disp
 '''
 
 
-def get_umatrix(weights, m, n):
-    """ Generates an n x m u-matrix of the SOM's weights.
+def get_umatrix(input_vects, weights, m, n):
+    """ Generates an n x m u-matrix of the SOM's weights and bmu indices of all the input data points
 
     Used to visualize higher-dimensional data. Shows the average distance between a SOM unit and its neighbors.
     When displayed, areas of a darker color separated by lighter colors correspond to clusters of units which
@@ -21,7 +21,8 @@ def get_umatrix(weights, m, n):
     :param weights: SOM weight matrix, `ndarray`
     :param m: Rows of neurons
     :param n: Columns of neurons
-    :return: m x n u-matrix `ndarray`
+    :return: m x n u-matrix `ndarray` 
+    :return: input_size x 1 bmu indices 'ndarray'
     """
     umatrix = np.zeros((m * n, 1))
     # Get the location of the neurons on the map to figure out their neighbors. I know I already have this in the
@@ -42,7 +43,16 @@ def get_umatrix(weights, m, n):
         # Expand dims to broadcast to each of the neighbors
         umatrix[i] = distance_matrix(np.expand_dims(weights[i], 0), neighbor_weights).mean()
 
-    return umatrix.reshape((m, n))
+    bmu_indices = []
+    for vect in input_vects:
+        min_index = min([i for i in range(len(list(weights)))],
+                        key=lambda x: np.linalg.norm(vect-
+                                                     list(weights)[x]))
+        bmu_indices.append(neuron_locs[min_index])
+        
+    return umatrix, bmu_indices
+
+
 
 
 if __name__ == "__main__":
@@ -88,8 +98,8 @@ if __name__ == "__main__":
         som.train(num_inputs=num_inputs)
 
         weights = som.output_weights
-
-        umatrix = get_umatrix(weights, m, n)
+        
+        umatrix, bmu_loc = get_umatrix(input_data,weights, m, n)
         fig = plt.figure()
         plt.imshow(umatrix, origin='lower')
         plt.show(block=True)
