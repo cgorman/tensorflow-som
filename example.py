@@ -101,5 +101,5 @@ if __name__ == "__main__":
         
         umatrix, bmu_loc = get_umatrix(input_data,weights, m, n)
         fig = plt.figure()
-        plt.imshow(umatrix, origin='lower')
+        plt.imshow(umatrix.reshape((m, n)), origin='lower')
         plt.show(block=True)
