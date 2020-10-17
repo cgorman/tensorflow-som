@@ -61,7 +61,7 @@ if __name__ == "__main__":
     graph = tf.Graph()
     with graph.as_default():
         # Make sure you allow_soft_placement, some ops have to be put on the CPU (e.g. summary operations)
-        session = tf.Session(config=tf.ConfigProto(
+        session = tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(
             allow_soft_placement=True,
             log_device_placement=False))
 
@@ -79,7 +79,7 @@ if __name__ == "__main__":
         dataset = tf.data.Dataset.from_tensor_slices(input_data.astype(np.float32))
         dataset = dataset.repeat()
         dataset = dataset.batch(batch_size)
-        iterator = dataset.make_one_shot_iterator()
+        iterator = tf.compat.v1.data.make_one_shot_iterator(dataset)
         next_element = iterator.get_next()
 
         # This is more neurons than you need but it makes the visualization look nicer
@@ -90,7 +90,7 @@ if __name__ == "__main__":
         som = SelfOrganizingMap(m=m, n=n, dim=dims, max_epochs=20, gpus=1, session=session, graph=graph,
                                 input_tensor=next_element, batch_size=batch_size, initial_learning_rate=0.1)
 
-        init_op = tf.global_variables_initializer()
+        init_op = tf.compat.v1.global_variables_initializer()
         session.run([init_op])
 
         # Note that I don't pass a SummaryWriter because I don't really want to record summaries in this script

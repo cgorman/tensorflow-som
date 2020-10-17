@@ -119,7 +119,7 @@ class SelfOrganizingMap:
         """
         if self._saver is None:
             # Create the saver object
-            self._saver = tf.train.Saver()
+            self._saver = tf.compat.v1.train.Saver()
         if self._checkpoint_dir is not None:
             output_name = Path(self._checkpoint_dir) / self._model_name
             self._saver.save(self._sess, output_name, global_step=global_step)
@@ -130,7 +130,7 @@ class SelfOrganizingMap:
         We are assuming that if it's loaded then it's already trained.
         """
         if self._saver is None:
-            self._saver = tf.train.Saver()
+            self._saver = tf.compat.v1.train.Saver()
 
         if self._restore_path is not None:
             logging.info("Restoring variables from checkpoint file {}".format(
@@ -151,21 +151,21 @@ class SelfOrganizingMap:
         In multi-gpu mode it will duplicate the model across the GPUs and use the CPU to calculate the final
         weight updates.
         """
-        with self._graph.as_default(), tf.variable_scope(tf.get_variable_scope()), tf.device('/cpu:0'):
+        with self._graph.as_default(), tf.compat.v1.variable_scope(tf.compat.v1.get_variable_scope()), tf.device('/cpu:0'):
             # This list will contain the handles to the numerator and denominator tensors for each of the towers
             tower_updates = list()
             # This is used by all of the towers and needs to be fed to the graph, so let's put it here
-            with tf.name_scope('Epoch'):
-                self._epoch = tf.placeholder("float", [], name="iter")
+            with tf.compat.v1.name_scope('Epoch'):
+                self._epoch = tf.compat.v1.placeholder("float", [], name="iter")
             if self._gpus > 0:
                 for i in range(self._gpus):
                     # We only want the summaries of the last tower, so wipe it out each time
                     self._summary_list = list()
                     with tf.device('/gpu:{}'.format(i)):
-                        with tf.name_scope('Tower_{}'.format(i)) as scope:
+                        with tf.compat.v1.name_scope('Tower_{}'.format(i)) as scope:
                             # Create the model on this tower and add the (numerator, denominator) tensors to the list
                             tower_updates.append(self._tower_som())
-                            tf.get_variable_scope().reuse_variables()
+                            tf.compat.v1.get_variable_scope().reuse_variables()
 
                 with tf.device('/gpu:{}'.format(self._gpus - 1)):
                     # Put the activity op on the last GPU
@@ -173,57 +173,57 @@ class SelfOrganizingMap:
                         self._input_tensor)
             else:
                 # Running CPU only
-                with tf.name_scope("Tower_0") as scope:
+                with tf.compat.v1.name_scope("Tower_0") as scope:
                     tower_updates.append(self._tower_som())
-                    tf.get_variable_scope().reuse_variables()
+                    tf.compat.v1.get_variable_scope().reuse_variables()
                     self._activity_op = self._make_activity_op(
                         self._input_tensor)
 
-            with tf.name_scope("Weight_Update"):
+            with tf.compat.v1.name_scope("Weight_Update"):
                 # Get the outputs
                 numerators, denominators = zip(*tower_updates)
                 # Add them up
-                numerators = tf.reduce_sum(tf.stack(numerators), axis=0)
-                denominators = tf.reduce_sum(tf.stack(denominators), axis=0)
+                numerators = tf.reduce_sum(input_tensor=tf.stack(numerators), axis=0)
+                denominators = tf.reduce_sum(input_tensor=tf.stack(denominators), axis=0)
                 # Divide them
                 new_weights = tf.divide(numerators, denominators)
                 # Assign them
-                self._training_op = tf.assign(self._weights, new_weights)
+                self._training_op = tf.compat.v1.assign(self._weights, new_weights)
 
     def _tower_som(self):
         """ Build a single SOM tower on the TensorFlow graph """
         # Randomly initialized weights for all neurons, stored together
         # as a matrix Variable of shape [num_neurons, input_dims]
-        with tf.name_scope('Weights'):
+        with tf.compat.v1.name_scope('Weights'):
             # Each tower will get its own copy of the weights variable. Since the towers are constructed sequentially,
             # the handle to the Tensors will be different for each tower even if we reference "self"
-            self._weights = tf.get_variable(name='weights',
-                                            shape=[
-                                                self._m * self._n, self._dim],
-                                            initializer=tf.random_uniform_initializer(maxval=1))
+            self._weights = tf.compat.v1.get_variable(name='weights',
+                                                shape=[
+                                                    self._m * self._n, self._dim],
+                                                initializer=tf.compat.v1.random_uniform_initializer(maxval=1))
 
-            with tf.name_scope('summaries'):
+            with tf.compat.v1.name_scope('summaries'):
                 # All summary ops are added to a list and then the merge() function is called at the end of
                 # this method
-                mean = tf.reduce_mean(self._weights)
-                self._summary_list.append(tf.summary.scalar('mean', mean))
-                with tf.name_scope('stdev'):
+                mean = tf.reduce_mean(input_tensor=self._weights)
+                self._summary_list.append(tf.compat.v1.summary.scalar('mean', mean))
+                with tf.compat.v1.name_scope('stdev'):
                     stdev = tf.sqrt(tf.reduce_mean(
-                        tf.squared_difference(self._weights, mean)))
-                self._summary_list.append(tf.summary.scalar('stdev', stdev))
-                self._summary_list.append(tf.summary.scalar(
-                    'max', tf.reduce_max(self._weights)))
-                self._summary_list.append(tf.summary.scalar(
-                    'min', tf.reduce_min(self._weights)))
+                        input_tensor=tf.math.squared_difference(self._weights, mean)))
+                self._summary_list.append(tf.compat.v1.summary.scalar('stdev', stdev))
+                self._summary_list.append(tf.compat.v1.summary.scalar(
+                    'max', tf.reduce_max(input_tensor=self._weights)))
+                self._summary_list.append(tf.compat.v1.summary.scalar(
+                    'min', tf.reduce_min(input_tensor=self._weights)))
                 self._summary_list.append(
-                    tf.summary.histogram('histogram', self._weights))
+                    tf.compat.v1.summary.histogram('histogram', self._weights))
 
         # Matrix of size [m*n, 2] for SOM grid locations of neurons.
         # Maps an index to an (x,y) coordinate of a neuron in the map for calculating the neighborhood distance
         self._location_vects = tf.constant(np.array(
             list(self._neuron_locations())), name='Location_Vectors')
 
-        with tf.name_scope('Input'):
+        with tf.compat.v1.name_scope('Input'):
             self._input = tf.identity(self._input_tensor)
 
         # Start by computing the best matching units / winning units for each input vector in the batch.
@@ -233,26 +233,26 @@ class SelfOrganizingMap:
         # inputs in the batch. Will have the shape [batch_size]
 
         # Oh also any time we call expand_dims it's almost always so we can make TF broadcast stuff properly
-        with tf.name_scope('BMU_Indices'):
+        with tf.compat.v1.name_scope('BMU_Indices'):
             # Distance between weights and the input vector
             # Note we are reducing along 2nd axis so we end up with a tensor of [batch_size, num_neurons]
             # corresponding to the distance between a particular input and each neuron in the map
             # Also note we are getting the squared distance because there's no point calling sqrt or tf.norm
             # if we're just doing a strict comparison
             squared_distance = tf.reduce_sum(
-                tf.pow(tf.subtract(tf.expand_dims(self._weights, axis=0),
-                                   tf.expand_dims(self._input, axis=1)), 2), 2)
+                input_tensor=tf.pow(tf.subtract(tf.expand_dims(self._weights, axis=0),
+                                   tf.expand_dims(self._input, axis=1)), 2), axis=2)
 
             # Get the index of the minimum distance for each input item, shape will be [batch_size],
-            bmu_indices = tf.argmin(squared_distance, axis=1)
+            bmu_indices = tf.argmin(input=squared_distance, axis=1)
 
         # This will extract the location of the BMU in the map for each input based on the BMU's indices
-        with tf.name_scope('BMU_Locations'):
+        with tf.compat.v1.name_scope('BMU_Locations'):
             # Using tf.gather we can use `bmu_indices` to index the location vectors directly
             bmu_locs = tf.reshape(
                 tf.gather(self._location_vects, bmu_indices), [-1, 2])
 
-        with tf.name_scope('Learning_Rate'):
+        with tf.compat.v1.name_scope('Learning_Rate'):
             # With each epoch, the initial sigma value decreases linearly
             radius = tf.subtract(self._initial_radius,
                                  tf.multiply(self._epoch,
@@ -264,7 +264,7 @@ class SelfOrganizingMap:
             alpha = tf.multiply(self._initial_learning_rate,
                                 tf.subtract(1.0, tf.divide(tf.cast(self._epoch, tf.float32),
                                                            tf.cast(self._max_epochs, tf.float32))))
-
+            
             # Construct the op that will generate a matrix with learning rates for all neurons and all inputs,
             # based on iteration number and location to BMU
 
@@ -273,9 +273,9 @@ class SelfOrganizingMap:
             # location vects shape should be [1, num_neurons, 2]
             # bmu_locs should be [batch_size, 1, 2]
             # Output needs to be [batch_size, num_neurons], i.e. a row vector of distances for each input item
-            bmu_distance_squares = tf.reduce_sum(tf.pow(tf.subtract(
+            bmu_distance_squares = tf.reduce_sum(input_tensor=tf.pow(tf.subtract(
                 tf.expand_dims(self._location_vects, axis=0),
-                tf.expand_dims(bmu_locs, axis=1)), 2), 2)
+                tf.expand_dims(bmu_locs, axis=1)), 2), axis=2)
 
             # Using the distances between each BMU, construct the Gaussian neighborhood function.
             # Basically, neurons which are close to the winner will move more than those further away.
@@ -293,25 +293,25 @@ class SelfOrganizingMap:
         # The batch formula for SOMs multiplies a neuron's neighborhood by all of the input vectors in the batch,
         # then divides that by just the sum of the neighborhood function for each of the inputs.
         # We are writing this in a way that performs that operation for each of the neurons in the map.
-        with tf.name_scope('Update_Weights'):
+        with tf.compat.v1.name_scope('Update_Weights'):
             # The numerator needs to be shaped [num_neurons, dimensions] to represent the new weights
             # for each of the neurons. At this point, the learning rate tensor will be
             # shaped [batch_size, neurons].
             # The end result is that, for each neuron in the network, we use the learning
             # rate between it and each of the input vectors, to calculate a new set of weights.
-            numerator = tf.reduce_sum(tf.multiply(tf.expand_dims(learning_rate_op, axis=-1),
+            numerator = tf.reduce_sum(input_tensor=tf.multiply(tf.expand_dims(learning_rate_op, axis=-1),
                                                   tf.expand_dims(self._input, axis=1)), axis=0)
 
             # The denominator is just the sum of the neighborhood functions for each neuron, so we get the sum
             # along axis 1 giving us an output shape of [num_neurons]. We then expand the dims so we can
             # broadcast for the division op. Again we transpose the learning rate tensor so it's
             # [num_neurons, batch_size] representing the learning rate of each neuron for each input vector
-            denominator = tf.expand_dims(tf.reduce_sum(learning_rate_op,
+            denominator = tf.expand_dims(tf.reduce_sum(input_tensor=learning_rate_op,
                                                        axis=0) + float(1e-12), axis=-1)
 
         # We on;y really care about summaries from one of the tower SOMs, so assign the merge op to
         # the last tower we make. Otherwise there's way too many on Tensorboard.
-        self._merged = tf.summary.merge(self._summary_list)
+        self._merged = tf.compat.v1.summary.merge(self._summary_list)
 
         # With multi-gpu training we collect the results and do the weight assignment on the CPU
         return numerator, denominator
@@ -323,12 +323,12 @@ class SelfOrganizingMap:
         :return A handle to the newly created activity op:
         """
         with self._graph.as_default():
-            with tf.name_scope("Activity"):
+            with tf.compat.v1.name_scope("Activity"):
                 # This constant controls the width of the gaussian.
                 # The closer to 0 it is, the wider it is.
                 c = tf.constant(self._c, dtype="float32")
                 # Get the euclidean distance between each neuron and the input vectors
-                dist = tf.norm(tf.subtract(
+                dist = tf.norm(tensor=tf.subtract(
                     tf.expand_dims(self._weights, axis=0),
                     tf.expand_dims(input_tensor, axis=1)),
                     name="Distance", axis=2)  # [batch_size, neurons]
@@ -342,7 +342,7 @@ class SelfOrganizingMap:
                 if self._softmax_activity:
                     activity = tf.divide(tf.exp(activity),
                                          tf.expand_dims(tf.reduce_sum(
-                                             tf.exp(activity), axis=1), axis=-1),
+                                             input_tensor=tf.exp(activity), axis=1), axis=-1),
                                          name="Softmax")
 
                 return tf.identity(activity, name="Output")
@@ -379,9 +379,9 @@ class SelfOrganizingMap:
                 # Only do summaries when a SummaryWriter has been provided
                 if writer:
                     if current_batch > 0 and current_batch % summary_mod == 0:
-                        run_options = tf.RunOptions(
-                            trace_level=tf.RunOptions.FULL_TRACE)
-                        run_metadata = tf.RunMetadata()
+                        run_options = tf.compat.v1.RunOptions(
+                            trace_level=tf.compat.v1.RunOptions.FULL_TRACE)
+                        run_metadata = tf.compat.v1.RunMetadata()
                         summary, _, _, = self._sess.run([self._merged, self._training_op,
                                                          self._activity_op],
                                                         feed_dict={
