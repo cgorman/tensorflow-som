@@ -53,6 +53,51 @@ def get_umatrix(input_vects, weights, m, n):
     return umatrix, bmu_indices
 
 
+def get_umatrix_optimized(input_vects, weights, m, n):
+    """ Generates an n x m u-matrix of the SOM's weights and bmu indices of all the input data points
+
+    Used to visualize higher-dimensional data. Shows the average distance between a SOM unit and its neighbors.
+    When displayed, areas of a darker color separated by lighter colors correspond to clusters of units which
+    encode similar information.
+    :param weights: SOM weight matrix, `ndarray`
+    :param m: Rows of neurons
+    :param n: Columns of neurons
+    :return: m x n u-matrix `ndarray` 
+    :return: input_size x 1 bmu indices 'ndarray'
+    """
+    umatrix = np.zeros((m * n, 1))
+    # Get the location of the neurons on the map to figure out their neighbors. I know I already have this in the
+    # SOM code but I put it here too to make it easier to follow.
+    neuron_locs = list()
+    for i in range(m):
+        for j in range(n):
+            neuron_locs.append(np.array([i, j]))
+
+    # iterate through each unit and find its neighbours on the map
+    for j in range(m):
+        for i in range(n):
+            cneighbor_idxs = list()
+            
+            # Save the neighbours for a unit with location i, j
+            if (i > 0):         
+                cneighbor_idxs.append(j * n + i - 1)
+            if (i < n - 1):
+                cneighbor_idxs.append(j * n + i + 1)
+            if (j > 0):
+                cneighbor_idxs.append(j * n + i - n)
+            if (j < m - 1):
+                cneighbor_idxs.append(j * n + i + n)
+
+            # Get the weights of the neighbouring units
+            cneighbor_weights = weights[cneighbor_idxs]
+
+            # Get the average distance between unit i, j and all of its neighbors
+            # Expand dims to broadcast to each of the neighbors
+            umatrix[j * n + i] = distance_matrix(np.expand_dims(weights[j * n + i], 0), cneighbor_weights).mean()
+
+    bmu_indices = som.bmu_indices(tf.constant(input_data, dtype=tf.float32))
+
+    return umatrix, bmu_indices
 
 
 if __name__ == "__main__":
@@ -99,7 +144,7 @@ if __name__ == "__main__":
 
         weights = som.output_weights
         
-        umatrix, bmu_loc = get_umatrix(input_data,weights, m, n)
+        umatrix, bmu_loc = get_umatrix_optimized(input_data,weights, m, n)
         fig = plt.figure()
         plt.imshow(umatrix.reshape((m, n)), origin='lower')
         plt.show(block=True)
