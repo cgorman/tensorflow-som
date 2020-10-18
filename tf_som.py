@@ -410,3 +410,15 @@ class SelfOrganizingMap:
             return np.array(self._sess.run(self._weights))
         else:
             return None
+
+    def bmu_indices(self, dataset):
+        with tf.compat.v1.name_scope('BMU_Indices_Dataset'):
+            # This is the same code from _tower_som adapted to calculate all Best Matching Units for each item in the dataset
+            squared_distance = tf.reduce_sum(
+                input_tensor=tf.pow(tf.subtract(tf.expand_dims(self._weights, axis=0),
+                                   tf.expand_dims(dataset, axis=1)), 2), axis=2)
+
+            bmu_indices = tf.argmin(input=squared_distance, axis=1)
+            bmu_locs = tf.reshape(tf.gather(self._location_vects, bmu_indices), [-1, 2])
+            # The number of BMUs is the same as the number of items in the dataset
+            return np.array(self._sess.run(bmu_locs))
