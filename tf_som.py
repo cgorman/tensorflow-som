@@ -21,6 +21,8 @@
 # SOFTWARE.
 # =================================================================================
 import tensorflow as tf
+import tensorflow_transform as tft
+import tensorflow_probability as tfp
 import numpy as np
 from pathlib import Path
 import logging
@@ -422,3 +424,39 @@ class SelfOrganizingMap:
             bmu_locs = tf.reshape(tf.gather(self._location_vects, bmu_indices), [-1, 2])
             # The number of BMUs is the same as the number of items in the dataset
             return np.array(self._sess.run(bmu_locs))
+
+    def pca_weights_init(self, dataset):
+        """ Initializes the weights of the map to span to the first two principal components.
+        Training a SOM with initial weights values based on their Principal Components makes the training process converge faster.
+        The data should be normalized prior to PCA initialization
+        """
+        if dataset.shape[1] == 1:
+            msg = 'At least 2 features are required for pca initialization'
+            raise ValueError(msg)
+
+        if self._m == 1 or self._n == 1:
+            msg = 'PCA requires the SOM map to have dimensions > 1 '
+            raise ValueError(msg)
+
+        # Calculate the covarience matrix for a dataset
+        tfcov = tfp.stats.covariance(dataset)
+        # Calculate the Eigen vectors and the Eigen values
+        eigen_values, eigen_vectors = tf.linalg.eigh(tfcov)
+        # Order them in ascending order
+        ev_order = tf.argsort(-eigen_values)
+
+        # Create evenly spaced values for the interval of -1 to 1
+        mspace = tf.Variable(tf.linspace(-1, 1, self._m), dtype=tf.float64)
+        nspace = tf.Variable(tf.linspace(-1, 1, self._n), dtype=tf.float64)
+
+        weights = list()
+        # Calculate the principal components by using the first two eigen vectors
+        for i in range(self._m):
+            for j in range(self._n):
+                weights.append(tf.add(tf.multiply(mspace[i], eigen_vectors[ev_order[0]]), tf.multiply(nspace[j], eigen_vectors[ev_order[1]])))
+       
+        weights_tensor = tf.convert_to_tensor(weights)
+        
+        weights_tensor = tf.cast(weights_tensor, tf.float32)
+        # Finally, assign the new weights
+        tf.compat.v1.assign(self._weights, weights_tensor)

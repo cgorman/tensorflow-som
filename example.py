@@ -134,7 +134,8 @@ if __name__ == "__main__":
         # Build the SOM object and place all of its ops on the graph
         som = SelfOrganizingMap(m=m, n=n, dim=dims, max_epochs=20, gpus=1, session=session, graph=graph,
                                 input_tensor=next_element, batch_size=batch_size, initial_learning_rate=0.1)
-
+        # Initialize PCA weights
+        som.pca_weights_init(input_data)
         init_op = tf.compat.v1.global_variables_initializer()
         session.run([init_op])
 
