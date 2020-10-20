@@ -1,5 +1,7 @@
 # TensorFlow Self-Organizing Map
-An implementation of the Kohonen self-organizing map<sup>1</sup> for TensorFlow 1.5 and Python 3.6. This was initially based
+An implementation of the Kohonen self-organizing map<sup>1</sup> for TensorFlow 1.5 and Python 3.6.
+**A Tensorflow V2 version has been contributed by [Dragan Avramovski](https://github.com/dragan-avramovski) and is in the tfv2 branch. (Thanks Dragan!)**
+This was initially based
 off of [Sachin Joglekar's](https://codesachin.wordpress.com/2015/11/28/self-organizing-maps-with-googles-tensorflow/)
 code but has a few key modifications:
  * Uses TensorFlow broadcasting semantics instead of `tf.pack` and `for` loops.
