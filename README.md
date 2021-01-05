@@ -16,7 +16,7 @@ code but has a few key modifications:
 
  ![Example U-Matrix](https://github.com/cgorman/tensorflow-som/blob/master/example_umatrix.png)
  
-Note that the example requires scikit-leran to be installed.
+Note that the example requires scikit-learn to be installed.
 
  I was going to write a blog post about this but I ended up just repeating everything I wrote in the comments,
  so please read them if you'd like to understand the code. For reference, the batch formula for SOMs is
