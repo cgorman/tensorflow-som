@@ -26,6 +26,8 @@ import tensorflow_probability as tfp
 import numpy as np
 from pathlib import Path
 import logging
+from hilbert import decode, encode
+from sklearn.preprocessing import MinMaxScaler
 
 __author__ = "Chris Gorman"
 __email__ = "chris@cgorman.net"
@@ -43,7 +45,7 @@ class SelfOrganizingMap:
 
     def __init__(self, m, n, dim, max_epochs=100, initial_radius=None, batch_size=128, initial_learning_rate=0.1,
                  graph=None, std_coeff=0.5, model_name='Self-Organizing-Map', softmax_activity=False, gpus=0,
-                 output_sensitivity=-1.0, input_tensor=None, session=None, checkpoint_dir=None, restore_path=None):
+                 output_sensitivity=-1.0, input_tensor=None, input_dataset=None, session=None, checkpoint_dir=None, restore_path=None, weights_init=None):
         """
         Initialize a self-organizing map on the tensorflow graph
         :param m: Number of rows of neurons
@@ -62,6 +64,8 @@ class SelfOrganizingMap:
                 elicit activity when distance is low, effectively introducing a threshold on the distance w/r/t activity.
                 See the plot in the readme file for a little introduction.
         :param session: A `tf.Session()` for executing the graph
+        :param input_dataset: holds the complete dataset, often used for PCA
+        :param weights_init: HCV = Hilber Curve init, PCA = Principal Component Analysis
         """
         self._m = abs(int(m))
         self._n = abs(int(n))
@@ -102,6 +106,9 @@ class SelfOrganizingMap:
         # This will be the collection of summaries for this subgraph. Add new summaries to it and pass it to merge()
         self._summary_list = list()
         self._input_tensor = input_tensor
+
+        self._input_dataset = input_dataset
+        self._weights_init = str(weights_init)
 
         if graph is None:
             self._graph = tf.Graph()
@@ -199,10 +206,19 @@ class SelfOrganizingMap:
         with tf.compat.v1.name_scope('Weights'):
             # Each tower will get its own copy of the weights variable. Since the towers are constructed sequentially,
             # the handle to the Tensors will be different for each tower even if we reference "self"
-            self._weights = tf.compat.v1.get_variable(name='weights',
-                                                shape=[
-                                                    self._m * self._n, self._dim],
-                                                initializer=tf.compat.v1.random_uniform_initializer(maxval=1))
+            
+            #PCA INIT
+            if self._weights_init == "PCA":
+              self._weights = self._pca_weights_init()
+            #HILBERT INIT
+            elif self._weights_init == "HCV":
+              self._weights = self._hcv_weight_init(2)
+            #RANDOM INIT
+            else:
+              self._weights = tf.compat.v1.get_variable(name='weights',
+                                                          shape=[
+                                                              self._m * self._n, self._dim],
+                                                          initializer=tf.compat.v1.random_uniform_initializer(minval=0, maxval=1))
 
             with tf.compat.v1.name_scope('summaries'):
                 # All summary ops are added to a list and then the merge() function is called at the end of
@@ -425,7 +441,7 @@ class SelfOrganizingMap:
             # The number of BMUs is the same as the number of items in the dataset
             return np.array(self._sess.run(bmu_locs))
 
-    def pca_weights_init(self, dataset):
+    def _pca_weights_init(self, dataset):
         """ Initializes the weights of the map to span to the first two principal components.
         Training a SOM with initial weights values based on their Principal Components makes the training process converge faster.
         The data should be normalized prior to PCA initialization
@@ -460,3 +476,12 @@ class SelfOrganizingMap:
         weights_tensor = tf.cast(weights_tensor, tf.float32)
         # Finally, assign the new weights
         tf.compat.v1.assign(self._weights, weights_tensor)
+     
+    def _hcv_weight_init(self, num_dims):
+        max_hilberts = np.arange(self._m * self._n)
+        hilbert_vectors = decode(max_hilberts, self._dim, num_dims)
+        scaler = MinMaxScaler()
+        hilbert_vectors = scaler.fit_transform(hilbert_vectors)
+        weights_tensor = tf.Variable(hilbert_vectors, dtype=tf.float32)
+
+        return weights_tensor
