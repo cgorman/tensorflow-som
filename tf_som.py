@@ -485,3 +485,38 @@ class SelfOrganizingMap:
         weights_tensor = tf.Variable(hilbert_vectors, dtype=tf.float32)
 
         return weights_tensor
+
+    def quantization(self, dataset):
+        with tf.compat.v1.name_scope('QUAN'):
+            squared_distance = tf.reduce_sum(
+                input_tensor=tf.pow(tf.subtract(tf.expand_dims(self._weights, axis=0),
+                                   tf.expand_dims(dataset, axis=1)), 2), axis=2)
+
+            # Get the index of the minimum distance for each input item, shape will be [batch_size],
+            bmu_indices = tf.argmin(input=squared_distance, axis=1)
+            # Get the Weights vectors for the BMUs
+            bmu_weights = tf.gather(self._weights, bmu_indices)
+            return bmu_weights
+
+    def quantization_error(self, dataset):
+        norm_values = tf.norm(dataset - self.quantization(dataset), axis=1)
+
+        q_error = tf.reduce_mean(input_tensor=norm_values)
+        return self._sess.run(q_error)
+
+
+    def topographic_error(self, dataset):
+         with tf.compat.v1.name_scope('TE'):
+            t = tf.constant(1.42, dtype=tf.float32)
+            squared_distance = tf.reduce_sum(
+                input_tensor=tf.pow(tf.subtract(tf.expand_dims(self._weights, axis=0),
+                                   tf.expand_dims(dataset, axis=1)), 2), axis=2)
+            
+            b2mu_inds = tf.argsort(squared_distance, axis=1)[:, :2]         
+
+            bmu_locs = tf.gather(self._location_vects, b2mu_inds)
+            diff = tf.cast(bmu_locs[:,1:]-bmu_locs[:,:-1], dtype=tf.float32)           
+            distance = tf.norm(diff, axis=1)            
+            distance = distance[distance > t]
+            te = tf.math.reduce_mean(distance)
+            return self._sess.run(te)
