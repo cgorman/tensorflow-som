@@ -1,3 +1,4 @@
+**NOTE:** *This package is no longer maintained and trained SOMs may have issues with stability. I will refrain from archiving this repository for the time being because I may end up releasing an updated version for PyTorch which I will link to before archiving. Like everything else, use this code at your own risk and please do some sanity checks. Thanks!*
 # TensorFlow Self-Organizing Map
 An implementation of the Kohonen self-organizing map<sup>1</sup> for TensorFlow 1.5 and Python 3.6.
 **A Tensorflow V2 version has been contributed by [Dragan Avramovski](https://github.com/dragan-avramovski) and is in the tfv2 branch. (Thanks Dragan!)**
